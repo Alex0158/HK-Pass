@@ -1,0 +1,53 @@
+.game-all-container {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    min-height: 100vh;
+  }
+  
+  .game-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+    height: 100%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .game-card-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  .game-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 10px;
+  }
+  
+  .game-info {
+    font-size: 0.9rem;
+    color: #e0e0e0;
+    margin-bottom: 5px;
+  }
+  
+  .limited-time {
+    margin-top: auto;
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+  }
+  
+  .badge {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+  
+  
