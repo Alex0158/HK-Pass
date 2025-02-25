@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Container, Row, Col, Card, Form } from 'react-bootstrap';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import styles from './RankingDashboard.module.css';
 
-// 統一 API Base URL
 const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 const gradients = {
@@ -13,7 +12,6 @@ const gradients = {
   playerMiniGame: 'linear-gradient(135deg, #fc4a1a, #f7b733)',
 };
 
-// 進度條部分：直接以普通 div 呈現最終寬度
 const calcProgressWidth = (value, maxValue) => {
   const percentage = Math.round((value / maxValue) * 100);
   return `${percentage}%`;
@@ -34,7 +32,7 @@ function RankingDashboard() {
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
 
-  // 前端設定：各排行榜顯示前幾名（僅供控制顯示數量）
+  // 前端設定：各排行榜顯示前幾名
   const [topCounts, setTopCounts] = useState({
     teamsScore: 6,
     teamsAttacked: 6,
@@ -48,6 +46,7 @@ function RankingDashboard() {
     playersMiniGame: false,
   });
 
+  // 儲存上一輪數據（如果需要比對）
   const prevDataRef = useRef({ teams: [], players: [] });
 
   const fetchData = useCallback(async () => {
@@ -56,9 +55,9 @@ function RankingDashboard() {
       const teamsData = await teamsRes.json();
       const playersRes = await fetch(`${API_BASE_URL}/players/`);
       const playersData = await playersRes.json();
-      // 對隊伍以總分排序（供隊伍總分排行榜使用）
+      // 對隊伍以總分排序（降序）
       teamsData.sort((a, b) => b.score - a.score);
-      // 對玩家以個人得分排序（供玩家得分排行榜使用）
+      // 對玩家以個人得分排序（降序）
       playersData.sort((a, b) => b.personal_score - a.personal_score);
       setTeams(teamsData);
       setPlayers(playersData);
@@ -73,7 +72,7 @@ function RankingDashboard() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // 取得各排行榜的最大值，避免除 0
+  // 取得各排行榜的最大值，避免除以 0
   const maxValues = {
     teamScore: teams.reduce((max, team) => Math.max(max, team.score), 0) || 1,
     teamAttacked: teams.reduce((max, team) => Math.max(max, team.attacked_count), 0) || 1,
@@ -81,18 +80,18 @@ function RankingDashboard() {
     playerMiniGame: players.reduce((max, player) => Math.max(max, player.completed_minigame_count), 0) || 1,
   };
 
-  // 依據不同排行榜重新排序
+  // 根據設定重新排序並取前幾名
   const sortedTeamsByScore = [...teams].slice(0, topCounts.teamsScore);
   const sortedTeamsByAttacked = [...teams].sort((a, b) => b.attacked_count - a.attacked_count).slice(0, topCounts.teamsAttacked);
   const sortedPlayersByScore = [...players].slice(0, topCounts.playersScore);
   const sortedPlayersByMiniGame = [...players].sort((a, b) => b.completed_minigame_count - a.completed_minigame_count).slice(0, topCounts.playersMiniGame);
 
-  // 格式化隊伍名稱，若隱藏則顯示 '---'
+  // 隊伍名稱格式化：若隱藏則顯示 '---'
   const teamLabelFormatter = (team) => {
     return team.hide_team_name ? '---' : team.name;
   };
 
-  // 格式化玩家名稱，依據隱藏設定
+  // 玩家名稱格式化：根據隱藏設定
   const formatPlayerLabel = (player) => {
     let teamObj = null;
     if (player.team && typeof player.team === 'object') {
@@ -108,30 +107,29 @@ function RankingDashboard() {
     return teamPart || namePart || '---';
   };
 
-  const RankingRow = React.memo(({ item, index, valueKey, labelType, maxValue, prevData }) => {
+  // RankingRow：只使用 layout 與 animate 屬性
+  const RankingRow = React.memo(({ item, index, valueKey, labelType, maxValue }) => {
     const value = item[valueKey];
     const progressWidth = calcProgressWidth(value, maxValue);
-    const prevIndex = prevData.findIndex((prevItem) => prevItem.id === item.id);
-    const yOffset = (prevIndex - index) * 100; // 大致上每行高度約 100px
-
     return (
       <motion.div
         layout
-        initial={{ opacity: 0, y: yOffset, rotateX: -10, z: -50 }}
-        animate={{ opacity: 1, y: 0, rotateX: 0, z: 0 }}
-        exit={{ opacity: 0, y: -yOffset, rotateX: 10, z: -50 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className={styles.rankingRow}
       >
         <div className={styles.rankNumber}>{index === 0 ? '👑' : index + 1}</div>
-        <div className={styles.rankLabel}>{labelType === "team" ? teamLabelFormatter(item) : formatPlayerLabel(item)}</div>
+        <div className={styles.rankLabel}>
+          {labelType === "team" ? teamLabelFormatter(item) : formatPlayerLabel(item)}
+        </div>
         <div className={styles.rankValue}>{displayValueByField(value, item, valueKey)}</div>
         <div className={styles.progressBar}>
           <motion.div
             className={styles.progressBarFill}
-            style={{ background: gradients[labelType === "team" ? "teamScore" : "playerScore"] }}
-            initial={{ width: 0 }}
-            animate={{ width: progressWidth }}
+            style={{
+              background: labelType === "team" ? gradients.teamScore : gradients.playerScore,
+              width: progressWidth
+            }}
             transition={{ duration: 0.5 }}
           />
         </div>
@@ -139,14 +137,13 @@ function RankingDashboard() {
     );
   });
 
-  const RankingCard = ({ title, items, maxValue, valueKey, labelType, cardGradient, barGradient, isHidden }) => {
-    const prevItems = labelType === "team" ? prevDataRef.current.teams : prevDataRef.current.players;
-
+  // RankingCard：直接渲染列表，不使用 AnimatePresence
+  const RankingCard = ({ title, items, maxValue, valueKey, labelType, cardGradient, isHidden }) => {
     return (
       <motion.div
         className={styles.card}
-        initial={{ opacity: 0, y: 20, rotateX: -5, rotateY: -5 }}
-        animate={{ opacity: 1, y: 0, rotateX: 5, rotateY: 5 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <Card.Header className={styles.cardHeader} style={{ background: cardGradient }}>
@@ -154,10 +151,7 @@ function RankingDashboard() {
         </Card.Header>
         <Card.Body className={styles.cardBody}>
           {isHidden ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
+            <div
               style={{
                 textAlign: "center",
                 color: "#fff",
@@ -167,21 +161,18 @@ function RankingDashboard() {
               }}
             >
               封印中，賄賂工作人員解鎖
-            </motion.div>
+            </div>
           ) : (
-            <AnimatePresence mode="popLayout">
-              {items.map((item, index) => (
-                <RankingRow
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  valueKey={valueKey}
-                  labelType={labelType}
-                  maxValue={maxValue}
-                  prevData={prevItems}
-                />
-              ))}
-            </AnimatePresence>
+            items.map((item, index) => (
+              <RankingRow
+                key={item.id}
+                item={item}
+                index={index}
+                valueKey={valueKey}
+                labelType={labelType}
+                maxValue={maxValue}
+              />
+            ))
           )}
         </Card.Body>
       </motion.div>
@@ -210,7 +201,6 @@ function RankingDashboard() {
               valueKey="score"
               labelType="team"
               cardGradient={gradients.teamScore}
-              barGradient="linear-gradient(90deg, #4e54c8, #8f94fb)"
               isHidden={hideRankings.teamsScore}
             />
           </Col>
@@ -224,7 +214,6 @@ function RankingDashboard() {
               valueKey="attacked_count"
               labelType="team"
               cardGradient={gradients.teamAttacked}
-              barGradient="linear-gradient(90deg, #ff416c, #ff4b2b)"
               isHidden={hideRankings.teamsAttacked}
             />
           </Col>
@@ -240,7 +229,6 @@ function RankingDashboard() {
               valueKey="personal_score"
               labelType="player"
               cardGradient={gradients.playerScore}
-              barGradient="linear-gradient(90deg, #11998e, #38ef7d)"
               isHidden={hideRankings.playersScore}
             />
           </Col>
@@ -254,7 +242,6 @@ function RankingDashboard() {
               valueKey="completed_minigame_count"
               labelType="player"
               cardGradient={gradients.playerMiniGame}
-              barGradient="linear-gradient(90deg, #fc4a1a, #f7b733)"
               isHidden={hideRankings.playersMiniGame}
             />
           </Col>
