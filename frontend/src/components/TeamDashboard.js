@@ -1,6 +1,9 @@
-// TeamDashboard.js
+// src/components/TeamDashboard.js
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Card, Table, Container, Row, Col } from 'react-bootstrap';
+
+// 從環境變數中讀取 API_BASE_URL，若未設定則默認為 /api
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 function TeamDashboard() {
   // 表單輸入的 state
@@ -8,15 +11,14 @@ function TeamDashboard() {
   const [attackerNumber, setAttackerNumber] = useState('');
   const [targetTeam, setTargetTeam] = useState('');
 
-  // 隊伍與玩家資料 (這裡假設 API 回傳的資料中，每個隊伍有 id、number、score、attacked_count 屬性，
-  // 每個玩家有 id、name、number、personal_score、chips、completed_minigame_count、team 屬性)
+  // 隊伍與玩家資料
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
 
   // 排序方式：'' / 'score' / 'attacked'
   const [sortType, setSortType] = useState('');
 
-  // 初始化取得隊伍與玩家資料 (實際上建議從 API 取得)
+  // 初始化取得隊伍與玩家資料
   useEffect(() => {
     fetchTeams();
     fetchPlayers();
@@ -24,7 +26,7 @@ function TeamDashboard() {
 
   const fetchTeams = async () => {
     try {
-      const res = await fetch('/api/teams/');
+      const res = await fetch(`${API_BASE_URL}/teams/`);
       const data = await res.json();
       setTeams(data);
     } catch (error) {
@@ -34,7 +36,7 @@ function TeamDashboard() {
 
   const fetchPlayers = async () => {
     try {
-      const res = await fetch('/api/players/');
+      const res = await fetch(`${API_BASE_URL}/players/`);
       const data = await res.json();
       setPlayers(data);
     } catch (error) {
@@ -42,7 +44,7 @@ function TeamDashboard() {
     }
   };
 
-  // 處理攻擊動作
+  // 處理攻擊動作：此處只是模擬更新，實際上你應該用 API 請求更新後端資料
   const handleAttack = async () => {
     if (!attackerTeam || !attackerNumber || !targetTeam) {
       alert("請輸入攻擊者隊伍、攻擊者號碼以及被攻擊隊伍");
@@ -53,7 +55,7 @@ function TeamDashboard() {
       return;
     }
 
-    // 模擬更新：更新隊伍分數與被攻擊次數，以及攻擊者個人分
+    // 模擬更新：更新隊伍分數、被攻擊次數，以及攻擊者玩家的個人分
     const updatedTeams = teams.map(team => {
       if (String(team.number) === attackerTeam) {
         return { ...team, score: team.score + 2 };
@@ -73,7 +75,6 @@ function TeamDashboard() {
       return player;
     });
 
-    // 實際上您可能會分別發送 API 請求來更新攻擊者隊伍、攻擊者玩家、以及被攻擊隊伍
     setTeams(updatedTeams);
     setPlayers(updatedPlayers);
     alert("攻擊計分已更新！");

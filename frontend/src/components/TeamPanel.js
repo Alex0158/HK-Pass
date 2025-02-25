@@ -1,12 +1,12 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { Container, Card } from "react-bootstrap";
-import { useParams } from "react-router-dom";
-import TeamInfo from "./TeamInfo";
-import AttackForm from "./AttackForm";
-import MemberList from "./MemberList";
-import { fetchTeam, fetchMembers, fetchAllTeams, fetchAllPlayers, fetchCommonSettings } from "../api/apiService";
+// src/components/TeamPanel.js
+import React, { useState, useEffect } from 'react';
+import { Container, Card } from 'react-bootstrap';
+import { useParams } from 'react-router-dom';
+import TeamInfo from './TeamInfo';
+import AttackForm from './AttackForm';
+import MemberList from './MemberList';
+// 從 apiService 引入所有資料請求方法（這些方法內部會使用環境變數設定 API_BASE_URL）
+import { fetchTeam, fetchMembers, fetchAllTeams, fetchAllPlayers, fetchCommonSettings } from '../api/apiService';
 
 export default function TeamPanel() {
   const { teamName } = useParams();
@@ -21,6 +21,7 @@ export default function TeamPanel() {
 
     const initializeData = async () => {
       try {
+        // 使用更新後的 fetchTeam 函數（內部使用環境變數）
         const teamData = await fetchTeam(teamName);
         setTeam(teamData);
 

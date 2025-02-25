@@ -2,17 +2,20 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Form, Row, Col, Button } from "react-bootstrap"
+// 從 apiService 引入更新玩家與隊伍的方法
 import { updateTeam, updatePlayer } from "../api/apiService"
 
+// 更新後的 AttackForm，統一使用 apiService 的 API_BASE_URL 進行請求
 export default function AttackForm({ team, allTeams, allPlayers, commonSettings, refreshData }) {
   const [attackerTeam, setAttackerTeam] = useState("")
   const [attackerNumber, setAttackerNumber] = useState("")
   const [attackCount, setAttackCount] = useState(1)
   const [attackerPlayers, setAttackerPlayers] = useState([])
 
-  // 使用 useRef 來確保 attackerNumber 不會被 useEffect 清空
+  // 使用 useRef 保持 attackerNumber 值不被 useEffect 清空
   const attackerNumberRef = useRef(attackerNumber)
 
+  // 當攻擊者隊伍變動時，從 allPlayers 中過濾出該隊伍的玩家
   useEffect(() => {
     if (attackerTeam) {
       const filtered = allPlayers.filter((player) => {
@@ -20,8 +23,7 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
         return playerTeam && playerTeam.name.trim().toLowerCase() === attackerTeam.trim().toLowerCase()
       })
       setAttackerPlayers(filtered)
-
-      // **只有當當前選擇的攻擊者號碼不在新的列表時，才重設**
+      // 只有當目前選定的攻擊者號碼不在新的列表時，才重置
       if (!filtered.some(player => player.number === attackerNumberRef.current)) {
         setAttackerNumber("")
       }
@@ -30,7 +32,7 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
     }
   }, [attackerTeam, allPlayers, allTeams])
 
-  // 讓 attackerNumberRef 保持最新的值，防止被清空
+  // 讓 attackerNumberRef 保持最新
   useEffect(() => {
     attackerNumberRef.current = attackerNumber
   }, [attackerNumber])
@@ -51,14 +53,18 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
     }
 
     try {
+      // 更新被攻擊隊伍的被攻擊次數
       const newAttackedCount = team.attacked_count + count * commonSettings.attacked_increment
       await updateTeam(team.id, { attacked_count: newAttackedCount })
 
+      // 從攻擊者隊伍中找出對應的玩家
       const attackerPlayer = attackerPlayers.find((p) => p.number.trim() === attackerNumber.trim())
       if (attackerPlayer) {
+        // 更新攻擊者玩家的分數
         const newPlayerScore = attackerPlayer.personal_score + count * commonSettings.attacker_player_bonus
         await updatePlayer(attackerPlayer.id, { personal_score: newPlayerScore })
 
+        // 找出攻擊者的隊伍，更新該隊伍的總分
         const attackerTeamObj = allTeams.find((t) => t.name === attackerTeam)
         if (attackerTeamObj) {
           const newTeamScore = attackerTeamObj.score + count * commonSettings.attacker_team_bonus
@@ -76,7 +82,9 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
 攻擊者玩家加分: ${count * commonSettings.attacker_player_bonus}，
 攻擊者隊伍加分: ${count * commonSettings.attacker_team_bonus}`)
 
+      // 刷新最新資料
       await refreshData()
+      // 清空輸入欄位
       setAttackerTeam("")
       setAttackerNumber("")
       setAttackCount(1)
@@ -160,9 +168,7 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
         </Col>
       </Row>
       <p className="mt-2" style={{ fontSize: "0.7rem", color: "#555" }}>
-        (通用設定：隊伍加分 {commonSettings ? commonSettings.attacker_team_bonus : "讀取中"}、 玩家加分{" "}
-        {commonSettings ? commonSettings.attacker_player_bonus : "讀取中"}、 被攻擊增加{" "}
-        {commonSettings ? commonSettings.attacked_increment : "讀取中"})
+        (通用設定：隊伍加分 {commonSettings ? commonSettings.attacker_team_bonus : "讀取中"}、 玩家加分 {commonSettings ? commonSettings.attacker_player_bonus : "讀取中"}、 被攻擊增加 {commonSettings ? commonSettings.attacked_increment : "讀取中"})
       </p>
     </Form>
   )

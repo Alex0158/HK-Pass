@@ -1,8 +1,10 @@
-// src/components/RankingDashboard.js
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Container, Row, Col, Card, Form } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './RankingDashboard.module.css';
+
+// 統一 API Base URL
+const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 const gradients = {
   teamScore: 'linear-gradient(135deg, #4e54c8, #8f94fb)',
@@ -50,9 +52,9 @@ function RankingDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const teamsRes = await fetch('/api/teams/');
+      const teamsRes = await fetch(`${API_BASE_URL}/teams/`);
       const teamsData = await teamsRes.json();
-      const playersRes = await fetch('/api/players/');
+      const playersRes = await fetch(`${API_BASE_URL}/players/`);
       const playersData = await playersRes.json();
       // 對隊伍以總分排序（供隊伍總分排行榜使用）
       teamsData.sort((a, b) => b.score - a.score);
@@ -67,7 +69,7 @@ function RankingDashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 1000);
+    const interval = setInterval(fetchData, 5000); // 每 5 秒刷新一次
     return () => clearInterval(interval);
   }, [fetchData]);
 

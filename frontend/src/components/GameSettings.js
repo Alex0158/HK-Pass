@@ -1,9 +1,9 @@
-// src/components/GameSettings.js
 import React, { useState, useEffect } from 'react';
 import { Container, Card, Table, Form, Button } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchGames, updateGame } from "../api/apiService";
 
-// EditableCell component: click to edit and submit changes on blur or Enter
+// EditableCell 元件：點擊後轉為 input，失去焦點或按 Enter 自動送出更新
 function EditableCell({ value, onSave }) {
   const [editing, setEditing] = useState(false);
   const [tempValue, setTempValue] = useState(
@@ -15,9 +15,7 @@ function EditableCell({ value, onSave }) {
   }, [value]);
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      finishEditing();
-    }
+    if (e.key === 'Enter') finishEditing();
   };
 
   const finishEditing = () => {
@@ -43,7 +41,7 @@ function EditableCell({ value, onSave }) {
   );
 }
 
-// Popup animation variants
+// Popup 動畫 variants
 const popupVariants = {
   hidden: { opacity: 0, y: -50, scale: 0.5 },
   visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 120 } },
@@ -53,7 +51,7 @@ const popupVariants = {
 function GameSettings() {
   const [games, setGames] = useState([]);
   const [popup, setPopup] = useState(null);
-  // New game state for adding a game. For new rows, play_count, is_displayed, is_limited, and limited_time use default values.
+  // 新增遊戲的狀態，預設欄位（被玩次數、顯示與限時等皆使用預設值）
   const [newGame, setNewGame] = useState({
     category: "",
     room: "",
@@ -65,11 +63,10 @@ function GameSettings() {
     limited_time: 0
   });
 
-  // Fetch all mini-game data
-  const fetchGames = async () => {
+  // 取得所有小遊戲資料（透過 apiService）
+  const loadGames = async () => {
     try {
-      const res = await fetch('/api/minigames/');
-      const data = await res.json();
+      const data = await fetchGames();
       setGames(data);
     } catch (error) {
       console.error('Error fetching games:', error);
@@ -77,35 +74,30 @@ function GameSettings() {
   };
 
   useEffect(() => {
-    fetchGames();
+    loadGames();
   }, []);
 
-  // Update a single game (PATCH request), then refresh data
-  const updateGame = async (id, updatedFields) => {
+  // 更新單筆遊戲資料，更新後重新取得最新資料
+  const handleUpdateGame = async (id, updatedFields) => {
     try {
-      const res = await fetch(`/api/minigames/${id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedFields)
-      });
-      if (!res.ok) {
-        console.error('更新失敗：', await res.text());
-      } else {
-        fetchGames();
+      const res = await updateGame(id, updatedFields);
+      if (!res) {
+        console.error('更新失敗');
       }
+      loadGames();
     } catch (error) {
       console.error('Error updating game:', error);
     }
   };
 
-  // Delete game function
+  // 刪除遊戲
   const deleteGame = async (gameId) => {
     if (window.confirm("確定要刪除這個遊戲嗎？")) {
       try {
         const res = await fetch(`/api/minigames/${gameId}/`, { method: 'DELETE' });
         if (res.ok) {
           alert("遊戲刪除成功！");
-          fetchGames();
+          loadGames();
         } else {
           alert("刪除失敗！");
         }
@@ -115,18 +107,14 @@ function GameSettings() {
     }
   };
 
-  // Clear play count function: set play_count to 0
+  // 清零被玩次數
   const clearPlayCount = async (gameId) => {
     if (window.confirm("確定要清零被玩次數嗎？")) {
       try {
-        const res = await fetch(`/api/minigames/${gameId}/`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ play_count: 0 })
-        });
-        if (res.ok) {
+        const res = await updateGame(gameId, { play_count: 0 });
+        if (res) {
           alert("被玩次數已清零！");
-          fetchGames();
+          loadGames();
         } else {
           alert("清零失敗！");
         }
@@ -136,7 +124,7 @@ function GameSettings() {
     }
   };
 
-  // Trigger Popup message for limited games
+  // 當限時開啟時觸發 Popup
   const triggerPopup = (game) => {
     setPopup(`限時遊戲 "${game.name}" 已啟用！限時 ${game.limited_time} 秒`);
     setTimeout(() => {
@@ -144,22 +132,21 @@ function GameSettings() {
     }, 5000);
   };
 
-  // Handle switch change; if "limited" is turned on, trigger popup
+  // 處理限時開關
   const handleSwitchChange = (game, field, checked) => {
-    updateGame(game.id, { [field]: checked });
+    handleUpdateGame(game.id, { [field]: checked });
     if (field === 'is_limited' && checked) {
       triggerPopup(game);
     }
   };
 
-  // New game addition function
+  // 新遊戲新增操作
   const addGame = async () => {
-    // Validate required fields
+    // 驗證必要欄位
     if (!newGame.category.trim() || !newGame.room.trim() || !newGame.name.trim() || newGame.available_chips === "") {
       alert("請填寫所有必要的欄位！");
       return;
     }
-    // Use default values for play_count, is_displayed, is_limited, and limited_time
     const payload = {
       category: newGame.category,
       room: newGame.room,
@@ -188,12 +175,12 @@ function GameSettings() {
           is_limited: false,
           limited_time: 0
         });
-        fetchGames();
+        loadGames();
       } else {
         alert("新增遊戲失敗！");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error adding game:", error);
       alert("新增遊戲時發生錯誤！");
     }
   };
@@ -242,7 +229,7 @@ function GameSettings() {
               </tr>
             </thead>
             <tbody>
-              {games.map(game => (
+              {games.map((game) => (
                 <tr key={game.id}>
                   <td>
                     <Button variant="danger" size="sm" onClick={() => deleteGame(game.id)}>
@@ -252,38 +239,38 @@ function GameSettings() {
                   <td>
                     <EditableCell
                       value={game.category}
-                      onSave={(newVal) => updateGame(game.id, { category: newVal })}
+                      onSave={(newVal) => handleUpdateGame(game.id, { category: newVal })}
                     />
                   </td>
                   <td>
                     <EditableCell
                       value={game.room}
-                      onSave={(newVal) => updateGame(game.id, { room: newVal })}
+                      onSave={(newVal) => handleUpdateGame(game.id, { room: newVal })}
                     />
                   </td>
                   <td>
                     <EditableCell
                       value={game.name}
-                      onSave={(newVal) => updateGame(game.id, { name: newVal })}
+                      onSave={(newVal) => handleUpdateGame(game.id, { name: newVal })}
                     />
                   </td>
                   <td>
                     <EditableCell
                       value={game.available_chips}
-                      onSave={(newVal) => updateGame(game.id, { available_chips: Number(newVal) })}
+                      onSave={(newVal) => handleUpdateGame(game.id, { available_chips: Number(newVal) })}
                     />
                   </td>
                   <td>
                     <EditableCell
                       value={game.play_count}
-                      onSave={(newVal) => updateGame(game.id, { play_count: Number(newVal) })}
+                      onSave={(newVal) => handleUpdateGame(game.id, { play_count: Number(newVal) })}
                     />
                   </td>
                   <td>
                     <Form.Check
                       type="switch"
                       checked={game.is_displayed}
-                      onChange={(e) => updateGame(game.id, { is_displayed: e.target.checked })}
+                      onChange={(e) => handleUpdateGame(game.id, { is_displayed: e.target.checked })}
                     />
                   </td>
                   <td>
@@ -296,7 +283,7 @@ function GameSettings() {
                   <td>
                     <EditableCell
                       value={game.limited_time !== null && game.limited_time !== undefined ? game.limited_time.toString() : ''}
-                      onSave={(newVal) => updateGame(game.id, { limited_time: Number(newVal) })}
+                      onSave={(newVal) => handleUpdateGame(game.id, { limited_time: Number(newVal) })}
                     />
                   </td>
                   <td>
@@ -306,7 +293,7 @@ function GameSettings() {
                   </td>
                 </tr>
               ))}
-              {/* New game addition row */}
+              {/* 新增遊戲的空白列 */}
               <tr>
                 <td></td>
                 <td>
@@ -345,7 +332,7 @@ function GameSettings() {
                     size="sm"
                   />
                 </td>
-                {/* Default values displayed */}
+                {/* 其餘欄位使用預設值 */}
                 <td style={{ textAlign: 'center' }}>0</td>
                 <td style={{ textAlign: 'center' }}>Off</td>
                 <td style={{ textAlign: 'center' }}>Off</td>

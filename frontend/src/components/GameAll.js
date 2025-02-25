@@ -12,6 +12,7 @@ function GameAll() {
   const [games, setGames] = useState([])
   const navigate = useNavigate()
 
+  // 使用 useCallback 定義取得遊戲資料的函式
   const fetchAndSetGames = useCallback(async () => {
     try {
       const availableGames = await fetchGames()
@@ -21,12 +22,14 @@ function GameAll() {
     }
   }, [])
 
+  // 改為每 5 秒刷新一次資料
   useEffect(() => {
     fetchAndSetGames()
-    const interval = setInterval(fetchAndSetGames, 1000)
+    const interval = setInterval(fetchAndSetGames, 5000)
     return () => clearInterval(interval)
   }, [fetchAndSetGames])
 
+  // 使用 useMemo 優化渲染
   const gameCards = useMemo(() => {
     return games.map((game) => <GameCard key={game.id} game={game} navigate={navigate} />)
   }, [games, navigate])
@@ -64,4 +67,3 @@ function GameAll() {
 }
 
 export default GameAll
-
