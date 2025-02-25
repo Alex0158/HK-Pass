@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Card, Table, Form, Button } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchGames, updateGame } from "../api/apiService";
+
+// 定義 Render 上的 API 基底 URL
+const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 // EditableCell 元件：點擊後轉為 input，失去焦點或按 Enter 自動送出更新
 function EditableCell({ value, onSave }) {
@@ -51,7 +53,7 @@ const popupVariants = {
 function GameSettings() {
   const [games, setGames] = useState([]);
   const [popup, setPopup] = useState(null);
-  // 新增遊戲的狀態，預設欄位（被玩次數、顯示與限時等皆使用預設值）
+  // 新增遊戲的狀態，預設值：被玩次數為 0，顯示、限時皆為 Off，限時秒數為 0
   const [newGame, setNewGame] = useState({
     category: "",
     room: "",
@@ -63,10 +65,11 @@ function GameSettings() {
     limited_time: 0
   });
 
-  // 取得所有小遊戲資料（透過 apiService）
+  // 取得所有小遊戲資料
   const loadGames = async () => {
     try {
-      const data = await fetchGames();
+      const res = await fetch(`${API_BASE_URL}/minigames/`);
+      const data = await res.json();
       setGames(data);
     } catch (error) {
       console.error('Error fetching games:', error);
@@ -80,9 +83,13 @@ function GameSettings() {
   // 更新單筆遊戲資料，更新後重新取得最新資料
   const handleUpdateGame = async (id, updatedFields) => {
     try {
-      const res = await updateGame(id, updatedFields);
-      if (!res) {
-        console.error('更新失敗');
+      const res = await fetch(`${API_BASE_URL}/minigames/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedFields)
+      });
+      if (!res.ok) {
+        console.error('更新失敗：', await res.text());
       }
       loadGames();
     } catch (error) {
@@ -94,7 +101,7 @@ function GameSettings() {
   const deleteGame = async (gameId) => {
     if (window.confirm("確定要刪除這個遊戲嗎？")) {
       try {
-        const res = await fetch(`/api/minigames/${gameId}/`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE_URL}/minigames/${gameId}/`, { method: 'DELETE' });
         if (res.ok) {
           alert("遊戲刪除成功！");
           loadGames();
@@ -111,8 +118,12 @@ function GameSettings() {
   const clearPlayCount = async (gameId) => {
     if (window.confirm("確定要清零被玩次數嗎？")) {
       try {
-        const res = await updateGame(gameId, { play_count: 0 });
-        if (res) {
+        const res = await fetch(`${API_BASE_URL}/minigames/${gameId}/`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ play_count: 0 })
+        });
+        if (res.ok) {
           alert("被玩次數已清零！");
           loadGames();
         } else {
@@ -158,7 +169,7 @@ function GameSettings() {
       limited_time: 0
     };
     try {
-      const res = await fetch('/api/minigames/', {
+      const res = await fetch(`${API_BASE_URL}/minigames/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -332,7 +343,6 @@ function GameSettings() {
                     size="sm"
                   />
                 </td>
-                {/* 其餘欄位使用預設值 */}
                 <td style={{ textAlign: 'center' }}>0</td>
                 <td style={{ textAlign: 'center' }}>Off</td>
                 <td style={{ textAlign: 'center' }}>Off</td>
