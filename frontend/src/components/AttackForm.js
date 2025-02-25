@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Form, Row, Col, Button } from "react-bootstrap"
 import { updateTeam, updatePlayer } from "../api/apiService"
 
@@ -10,6 +10,9 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
   const [attackCount, setAttackCount] = useState(1)
   const [attackerPlayers, setAttackerPlayers] = useState([])
 
+  // 使用 useRef 來確保 attackerNumber 不會被 useEffect 清空
+  const attackerNumberRef = useRef(attackerNumber)
+
   useEffect(() => {
     if (attackerTeam) {
       const filtered = allPlayers.filter((player) => {
@@ -17,11 +20,20 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
         return playerTeam && playerTeam.name.trim().toLowerCase() === attackerTeam.trim().toLowerCase()
       })
       setAttackerPlayers(filtered)
+
+      // **只有當當前選擇的攻擊者號碼不在新的列表時，才重設**
+      if (!filtered.some(player => player.number === attackerNumberRef.current)) {
+        setAttackerNumber("")
+      }
     } else {
       setAttackerPlayers([])
     }
-    setAttackerNumber("")
   }, [attackerTeam, allPlayers, allTeams])
+
+  // 讓 attackerNumberRef 保持最新的值，防止被清空
+  useEffect(() => {
+    attackerNumberRef.current = attackerNumber
+  }, [attackerNumber])
 
   const handleAttack = async () => {
     if (!attackerTeam || !attackerNumber || !attackCount || !commonSettings) {
@@ -155,4 +167,3 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
     </Form>
   )
 }
-

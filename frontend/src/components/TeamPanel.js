@@ -43,7 +43,7 @@ export default function TeamPanel() {
     };
 
     initializeData();
-    const interval = setInterval(initializeData, 5000);
+    const interval = setInterval(initializeData, 1000);
     return () => clearInterval(interval);
   }, [teamName]);
 
