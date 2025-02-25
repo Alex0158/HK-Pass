@@ -16,7 +16,8 @@ const MainMenu = () => {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await fetch('/api/teams/');
+        // 直接呼叫 Render 上的後端 API
+        const res = await fetch('https://hk-pass-2.onrender.com/api/teams/');
         const data = await res.json();
         setTeams(data);
       } catch (error) {
@@ -56,14 +57,15 @@ const MainMenu = () => {
   ];
 
   return (
-    <Container fluid
+    <Container
+      fluid
       className="d-flex flex-column align-items-center"
       style={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #141E30, #243B55)',
         padding: '20px',
         overflowX: 'hidden',
-        overflowY: 'auto'
+        overflowY: 'auto',
       }}
     >
       <motion.h1
@@ -80,23 +82,47 @@ const MainMenu = () => {
           <Col xs={12} sm={6} md={4} className="mb-4" key={`static-${idx}`}>
             <motion.div variants={cardVariants} whileHover="hover">
               <Card onClick={() => navigate(card.route)} style={{ cursor: 'pointer', borderRadius: '12px' }}>
-                <Card.Body className="text-center" style={{ background: card.bgColor, color: '#fff', padding: '20px' }}>
+                <Card.Body
+                  className="text-center"
+                  style={{ background: card.bgColor, color: '#fff', padding: '20px' }}
+                >
                   <Card.Title style={{ fontSize: '1.5rem' }}>{card.title}</Card.Title>
                 </Card.Body>
               </Card>
             </motion.div>
           </Col>
         ))}
+
+        {/* 如果有抓到隊伍資料，就顯示「隊伍操作」區塊 */}
         {teams.length > 0 && (
           <>
             <Col xs={12}>
-              <h2 style={{ color: '#fff', textAlign: 'center', margin: '20px 0', fontSize: '1.8rem' }}>隊伍操作</h2>
+              <h2
+                style={{
+                  color: '#fff',
+                  textAlign: 'center',
+                  margin: '20px 0',
+                  fontSize: '1.8rem',
+                }}
+              >
+                隊伍操作
+              </h2>
             </Col>
-            {teams.map(team => (
+            {teams.map((team) => (
               <Col xs={12} sm={6} md={4} className="mb-4" key={team.id}>
                 <motion.div variants={cardVariants} whileHover="hover">
-                  <Card onClick={() => navigate(`/team-panel/${team.name}`)} style={{ cursor: 'pointer', borderRadius: '12px' }}>
-                    <Card.Body className="text-center" style={{ background: 'rgba(0, 0, 0, 0.5)', color: '#fff', padding: '20px' }}>
+                  <Card
+                    onClick={() => navigate(`/team-panel/${team.name}`)}
+                    style={{ cursor: 'pointer', borderRadius: '12px' }}
+                  >
+                    <Card.Body
+                      className="text-center"
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        color: '#fff',
+                        padding: '20px',
+                      }}
+                    >
                       <Card.Title style={{ fontSize: '1.5rem' }}>{team.name}</Card.Title>
                     </Card.Body>
                   </Card>
@@ -107,7 +133,14 @@ const MainMenu = () => {
         )}
       </Row>
 
-      <h3 style={{ color: '#fff', textAlign: 'center', marginTop: '20px', fontSize: '1.8rem' }}>
+      <h3
+        style={{
+          color: '#fff',
+          textAlign: 'center',
+          marginTop: '20px',
+          fontSize: '1.8rem',
+        }}
+      >
         薩里條村-傳說故事
       </h3>
     </Container>
