@@ -9,5 +9,14 @@ module.exports = function(app) {
     })
   );
 
+
+  app.use(
+    '/api2',
+    createProxyMiddleware({
+      target: 'http://10.77.80.1:8000',
+      changeOrigin: true,
+    })
+  );
+
   
 };
