@@ -20,8 +20,5 @@ from django.http import HttpResponse
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # 將 game App 的 URL 放在 /api/ 下
-    path('api/', include('game.urls')),
-    # 根目錄顯示一個簡單的歡迎頁面
-    path('', lambda request: HttpResponse("Welcome to my Django API", content_type="text/plain")),
+    path('api/', include('game.urls')),  # 這樣最終會是 /api/teams/
 ]
