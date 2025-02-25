@@ -72,7 +72,7 @@ const MainMenu = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1 }}
       >
-        社團遊戲管理
+        ENTP 統治世界
       </motion.h1>
 
       <Row className="w-100 justify-content-center">
