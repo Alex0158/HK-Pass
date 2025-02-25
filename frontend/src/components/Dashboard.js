@@ -1,6 +1,8 @@
-// src/components/Dashboard.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Card, Table, Form, Button } from 'react-bootstrap';
+
+// 設定 Render 上的 API 基底 URL
+const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 // EditableCell component: inline editing input
 function EditableCell({ value, onSave }) {
@@ -111,7 +113,7 @@ function Dashboard() {
   // Fetch common settings
   const fetchCommonSettings = useCallback(async () => {
     try {
-      const res = await fetch('/api/settings/');
+      const res = await fetch(`${API_BASE_URL}/settings/`);
       const data = await res.json();
       if (data.length > 0) {
         setCommonSettings(data[0]);
@@ -124,7 +126,7 @@ function Dashboard() {
   // Fetch teams data
   const fetchTeams = useCallback(async () => {
     try {
-      const res = await fetch('/api/teams/');
+      const res = await fetch(`${API_BASE_URL}/teams/`);
       const data = await res.json();
       data.sort((a, b) => b.score - a.score);
       setTeams(data);
@@ -136,7 +138,7 @@ function Dashboard() {
   // Fetch players data sorted by number
   const fetchPlayers = useCallback(async () => {
     try {
-      const res = await fetch('/api/players/');
+      const res = await fetch(`${API_BASE_URL}/players/`);
       const data = await res.json();
       data.sort((a, b) => parseInt(a.number) - parseInt(b.number));
       setPlayers(data);
@@ -179,7 +181,7 @@ function Dashboard() {
       ? { [field]: Number(newValue) }
       : { [field]: newValue };
     try {
-      const res = await fetch(`/api/teams/${teamId}/`, {
+      const res = await fetch(`${API_BASE_URL}/teams/${teamId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -202,7 +204,7 @@ function Dashboard() {
       ? { [field]: Number(newValue) }
       : { [field]: newValue };
     try {
-      const res = await fetch(`/api/players/${playerId}/`, {
+      const res = await fetch(`${API_BASE_URL}/players/${playerId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -222,7 +224,7 @@ function Dashboard() {
   const deletePlayer = async (playerId) => {
     if (window.confirm("確定要刪除該玩家嗎？")) {
       try {
-        const res = await fetch(`/api/players/${playerId}/`, { method: 'DELETE' });
+        const res = await fetch(`${API_BASE_URL}/players/${playerId}/`, { method: 'DELETE' });
         if (res.ok) {
           setPlayers(players.filter(player => player.id !== playerId));
         } else {
@@ -270,7 +272,7 @@ function Dashboard() {
       hide_team_name: newTeam.hide_team_name,
     };
     try {
-      const res = await fetch('/api/teams/', {
+      const res = await fetch(`${API_BASE_URL}/teams/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -307,7 +309,7 @@ function Dashboard() {
       hide_completed_minigame_count: newPlayer.hide_completed_minigame_count,
     };
     try {
-      const res = await fetch('/api/players/', {
+      const res = await fetch(`${API_BASE_URL}/players/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -355,7 +357,7 @@ function Dashboard() {
   const updateCommonSetting = async (field, newVal) => {
     const payload = { [field]: Number(newVal) };
     try {
-      const res = await fetch(`/api/settings/${commonSettings.id}/`, {
+      const res = await fetch(`${API_BASE_URL}/settings/${commonSettings.id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
