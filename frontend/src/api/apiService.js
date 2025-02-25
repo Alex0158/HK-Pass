@@ -1,4 +1,4 @@
-const API_BASE_URL = "/api";
+const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 async function fetchData(endpoint) {
   const response = await fetch(`${API_BASE_URL}${endpoint}`);
@@ -32,7 +32,6 @@ export const fetchAllPlayers = () => fetchData("/players/");
 export const fetchCommonSettings = () =>
   fetchData("/settings/").then((data) => data[0]);
 
-// 新增 fetchGames 與 updateGame
 export const fetchGames = () => fetchData("/minigames/");
 
 export const updateGame = (gameId, data) =>

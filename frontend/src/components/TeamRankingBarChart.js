@@ -8,8 +8,8 @@ const barVariants = {
   hidden: { width: 0 },
   visible: (customWidth) => ({
     width: customWidth,
-    transition: { type: 'spring', stiffness: 100, damping: 20 }
-  })
+    transition: { type: 'spring', stiffness: 100, damping: 20 },
+  }),
 };
 
 function TeamRankingBarChart() {
@@ -19,7 +19,8 @@ function TeamRankingBarChart() {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await fetch('/api/teams/');
+        // 如果你已經在 Vercel 或其他地方，且要直接呼叫 Render 的網址：
+        const res = await fetch('https://hk-pass-2.onrender.com/api/teams/');
         const data = await res.json();
         // 根據分數排序（降序）
         data.sort((a, b) => b.score - a.score);
@@ -39,27 +40,53 @@ function TeamRankingBarChart() {
 
   return (
     <Container className="my-5">
-      <h1 className="text-center mb-4" style={{ color: '#fff' }}>隊伍排行榜</h1>
-      <Card style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '20px', border: 'none', borderRadius: '12px' }}>
+      <h1 className="text-center mb-4" style={{ color: '#fff' }}>
+        隊伍排行榜
+      </h1>
+      <Card
+        style={{
+          background: 'rgba(0, 0, 0, 0.2)',
+          padding: '20px',
+          border: 'none',
+          borderRadius: '12px',
+        }}
+      >
         {teams.map((team, index) => {
           // 計算該隊條狀圖的寬度（以百分比表示）
           const widthPercent = (team.score / maxScore) * 100;
           const barWidth = `${widthPercent}%`;
+
           return (
             <div
               key={team.id}
               style={{
                 marginBottom: '20px',
                 display: 'flex',
-                alignItems: 'center'
+                alignItems: 'center',
               }}
             >
               {/* 左側顯示排名及隊伍編號 */}
-              <div style={{ width: '100px', color: '#fff', fontWeight: 'bold', fontSize: '1.1rem' }}>
+              <div
+                style={{
+                  width: '100px',
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                }}
+              >
                 {index + 1}. 隊伍 {team.number}
               </div>
               {/* 中間為條狀圖 */}
-              <div style={{ flexGrow: 1, margin: '0 15px', background: '#ddd', borderRadius: '8px', overflow: 'hidden', height: '30px' }}>
+              <div
+                style={{
+                  flexGrow: 1,
+                  margin: '0 15px',
+                  background: '#ddd',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  height: '30px',
+                }}
+              >
                 <motion.div
                   custom={barWidth}
                   variants={barVariants}
@@ -67,12 +94,20 @@ function TeamRankingBarChart() {
                   animate="visible"
                   style={{
                     height: '100%',
-                    background: 'linear-gradient(90deg, #4e54c8, #8f94fb)'
+                    background: 'linear-gradient(90deg, #4e54c8, #8f94fb)',
                   }}
                 />
               </div>
               {/* 右側顯示數值 */}
-              <div style={{ width: '60px', color: '#fff', textAlign: 'right', fontWeight: 'bold', fontSize: '1.1rem' }}>
+              <div
+                style={{
+                  width: '60px',
+                  color: '#fff',
+                  textAlign: 'right',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                }}
+              >
                 {team.score}
               </div>
             </div>

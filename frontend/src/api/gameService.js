@@ -1,15 +1,14 @@
-const API_BASE_URL = "/api"
+const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 export const fetchGames = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/minigames/`)
-    const data = await res.json()
+    const res = await fetch(`${API_BASE_URL}/minigames/`);
+    const data = await res.json();
     return data.filter((game) => {
-      return game.is_displayed === true || game.is_displayed === "true" || !!game.is_displayed
-    })
+      return game.is_displayed === true || game.is_displayed === "true" || !!game.is_displayed;
+    });
   } catch (error) {
-    console.error("Error fetching games:", error)
-    throw error
+    console.error("Error fetching games:", error);
+    throw error;
   }
 }
-
