@@ -9,6 +9,7 @@ cleo==2.1.0
 crashtest==0.4.1
 distlib==0.3.9
 Django==5.1.6
+django-cors-headers==4.7.0
 django-filter==25.1
 djangorestframework==3.15.2
 dulwich==0.22.7
