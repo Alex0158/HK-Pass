@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Form, Button, Row, Col, Spinner } from 'react-bootstrap';
+import { Container, Card, Form, Button, Spinner } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
+
+const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 function GameScore() {
   const { gameId } = useParams();
@@ -12,11 +14,11 @@ function GameScore() {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // **每 5 秒自動更新遊戲數據**
+  // 每 5 秒自動更新遊戲資料
   useEffect(() => {
     const fetchGame = async () => {
       try {
-        const res = await fetch(`/api/minigames/${gameId}/`);
+        const res = await fetch(`${API_BASE_URL}/minigames/${gameId}/`);
         const data = await res.json();
         setGame(data);
       } catch (error) {
@@ -24,14 +26,15 @@ function GameScore() {
       }
     };
     fetchGame();
-    const interval = setInterval(fetchGame, 1000); // **每 5 秒刷新一次**
+    const interval = setInterval(fetchGame, 5000);
     return () => clearInterval(interval);
   }, [gameId]);
 
+  // 取得所有隊伍資料
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await fetch('/api/teams/');
+        const res = await fetch(`${API_BASE_URL}/teams/`);
         const data = await res.json();
         setTeams(data);
       } catch (error) {
@@ -41,10 +44,11 @@ function GameScore() {
     fetchTeams();
   }, []);
 
+  // 取得所有玩家資料
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const res = await fetch('/api/players/');
+        const res = await fetch(`${API_BASE_URL}/players/`);
         const data = await res.json();
         setPlayers(data);
         setLoading(false);
@@ -56,10 +60,20 @@ function GameScore() {
     fetchPlayers();
   }, []);
 
+  // 當選擇的隊伍改變時，過濾出該隊伍的玩家
   useEffect(() => {
     if (selectedTeam) {
       const filtered = players.filter(player => {
-        let playerTeamName = player.team?.name || teams.find(t => t.id === player.team)?.name || '';
+        // 如果 player.team 為物件則直接使用，否則嘗試從 teams 中查找
+        let playerTeamName = "";
+        if (player.team && typeof player.team === 'object' && player.team.name) {
+          playerTeamName = player.team.name;
+        } else if (player.team) {
+          const foundTeam = teams.find(t => t.id === player.team);
+          if (foundTeam) {
+            playerTeamName = foundTeam.name;
+          }
+        }
         return playerTeamName.trim().toLowerCase() === selectedTeam.trim().toLowerCase();
       });
       setFilteredPlayers(filtered);
@@ -81,14 +95,16 @@ function GameScore() {
     }
     const newChips = player.chips + game.available_chips;
     try {
-      const res = await fetch(`/api/players/${player.id}/`, {
+      // 更新玩家籌碼
+      const res = await fetch(`${API_BASE_URL}/players/${player.id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chips: newChips })
       });
       if (res.ok) {
         alert("計分成功！");
-        const resGame = await fetch(`/api/minigames/${gameId}/`, {
+        // 更新遊戲被玩次數
+        const resGame = await fetch(`${API_BASE_URL}/minigames/${gameId}/`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ play_count: game.play_count + 1 })
@@ -99,6 +115,7 @@ function GameScore() {
         } else {
           alert("更新遊戲被玩次數失敗！");
         }
+        // 更新本地玩家資料
         const updatedPlayer = await res.json();
         setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
       } else {
