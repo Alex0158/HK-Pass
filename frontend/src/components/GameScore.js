@@ -5,8 +5,8 @@ import { useParams } from 'react-router-dom';
 const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 function GameScore() {
-  // 取得路由參數（假設路由設定為 /game-score/:id）
-  const { id } = useParams();
+  // 從 URL 中取得 gameId，請確認 App.js 中對應的路由為 /game-score/:gameId
+  const { gameId } = useParams();
   const [game, setGame] = useState(null);
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -19,7 +19,7 @@ function GameScore() {
   useEffect(() => {
     const fetchGame = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/minigames/${id}/`);
+        const res = await fetch(`${API_BASE_URL}/minigames/${gameId}/`);
         const data = await res.json();
         setGame(data);
       } catch (error) {
@@ -29,7 +29,7 @@ function GameScore() {
     fetchGame();
     const interval = setInterval(fetchGame, 5000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [gameId]);
 
   // 取得所有隊伍資料
   useEffect(() => {
@@ -65,6 +65,7 @@ function GameScore() {
   useEffect(() => {
     if (selectedTeam) {
       const filtered = players.filter(player => {
+        // 如果 player.team 是物件，直接使用其 name；否則嘗試從 teams 中查找
         let playerTeamName = "";
         if (player.team && typeof player.team === 'object' && player.team.name) {
           playerTeamName = player.team.name;
@@ -88,6 +89,7 @@ function GameScore() {
       alert("請選擇隊伍和玩家，並確認遊戲資料已載入。");
       return;
     }
+    // 找出選定的玩家
     const player = filteredPlayers.find(p => String(p.id) === selectedPlayer);
     if (!player) {
       alert("找不到選定的玩家。");
@@ -95,11 +97,14 @@ function GameScore() {
     }
     const newChips = player.chips + game.available_chips;
     try {
-      // 更新玩家籌碼，取得更新後的玩家資料
+      // 更新玩家籌碼及完成小遊戲次數（一次 PATCH 請求更新兩個欄位）
       const resPlayer = await fetch(`${API_BASE_URL}/players/${player.id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chips: newChips })
+        body: JSON.stringify({ 
+          chips: newChips, 
+          completed_minigame_count: player.completed_minigame_count + 1 
+        })
       });
       if (!resPlayer.ok) {
         alert("計分失敗！");
@@ -108,9 +113,9 @@ function GameScore() {
       const updatedPlayer = await resPlayer.json();
       
       alert("計分成功！");
-
+      
       // 更新遊戲被玩次數
-      const resGame = await fetch(`${API_BASE_URL}/minigames/${id}/`, {
+      const resGame = await fetch(`${API_BASE_URL}/minigames/${gameId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ play_count: game.play_count + 1 })
@@ -125,7 +130,7 @@ function GameScore() {
       // 更新本地玩家資料
       setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
     } catch (error) {
-      console.error("Error updating player's chips:", error);
+      console.error("Error updating player's data:", error);
       alert("計分時發生錯誤！");
     }
   };
@@ -153,9 +158,7 @@ function GameScore() {
       ) : (
         <>
           <Card className="mb-4">
-            <Card.Header style={{ fontWeight: "bold" }}>
-              遊戲資訊
-            </Card.Header>
+            <Card.Header style={{ fontWeight: "bold" }}>遊戲資訊</Card.Header>
             <Card.Body>
               <p><strong>類別：</strong>{game?.category}</p>
               <p><strong>房間：</strong>{game?.room}</p>
@@ -165,9 +168,7 @@ function GameScore() {
           </Card>
 
           <Card className="mb-4">
-            <Card.Header style={{ fontWeight: "bold" }}>
-              選擇玩家
-            </Card.Header>
+            <Card.Header style={{ fontWeight: "bold" }}>選擇玩家</Card.Header>
             <Card.Body>
               <Form>
                 <Form.Group controlId="formTeamSelect">
