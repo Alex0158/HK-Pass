@@ -5,7 +5,8 @@ import { useParams } from 'react-router-dom';
 const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
 
 function GameScore() {
-  const { gameId } = useParams();
+  // 取得路由參數（假設路由設定為 /game-score/:id）
+  const { id } = useParams();
   const [game, setGame] = useState(null);
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -18,7 +19,7 @@ function GameScore() {
   useEffect(() => {
     const fetchGame = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/minigames/${gameId}/`);
+        const res = await fetch(`${API_BASE_URL}/minigames/${id}/`);
         const data = await res.json();
         setGame(data);
       } catch (error) {
@@ -28,7 +29,7 @@ function GameScore() {
     fetchGame();
     const interval = setInterval(fetchGame, 5000);
     return () => clearInterval(interval);
-  }, [gameId]);
+  }, [id]);
 
   // 取得所有隊伍資料
   useEffect(() => {
@@ -64,7 +65,6 @@ function GameScore() {
   useEffect(() => {
     if (selectedTeam) {
       const filtered = players.filter(player => {
-        // 如果 player.team 為物件則直接使用，否則嘗試從 teams 中查找
         let playerTeamName = "";
         if (player.team && typeof player.team === 'object' && player.team.name) {
           playerTeamName = player.team.name;
@@ -95,32 +95,35 @@ function GameScore() {
     }
     const newChips = player.chips + game.available_chips;
     try {
-      // 更新玩家籌碼
-      const res = await fetch(`${API_BASE_URL}/players/${player.id}/`, {
+      // 更新玩家籌碼，取得更新後的玩家資料
+      const resPlayer = await fetch(`${API_BASE_URL}/players/${player.id}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chips: newChips })
       });
-      if (res.ok) {
-        alert("計分成功！");
-        // 更新遊戲被玩次數
-        const resGame = await fetch(`${API_BASE_URL}/minigames/${gameId}/`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ play_count: game.play_count + 1 })
-        });
-        if (resGame.ok) {
-          const updatedGame = await resGame.json();
-          setGame(updatedGame);
-        } else {
-          alert("更新遊戲被玩次數失敗！");
-        }
-        // 更新本地玩家資料
-        const updatedPlayer = await res.json();
-        setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
-      } else {
+      if (!resPlayer.ok) {
         alert("計分失敗！");
+        return;
       }
+      const updatedPlayer = await resPlayer.json();
+      
+      alert("計分成功！");
+
+      // 更新遊戲被玩次數
+      const resGame = await fetch(`${API_BASE_URL}/minigames/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ play_count: game.play_count + 1 })
+      });
+      if (resGame.ok) {
+        const updatedGame = await resGame.json();
+        setGame(updatedGame);
+      } else {
+        alert("更新遊戲被玩次數失敗！");
+      }
+      
+      // 更新本地玩家資料
+      setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
     } catch (error) {
       console.error("Error updating player's chips:", error);
       alert("計分時發生錯誤！");
