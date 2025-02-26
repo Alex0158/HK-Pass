@@ -74,7 +74,7 @@ function RankingDashboard() {
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, 5000)
+    const interval = setInterval(fetchData, 1000)
     return () => clearInterval(interval)
   }, [fetchData])
 
