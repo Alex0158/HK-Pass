@@ -173,3 +173,4 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
     </Form>
   )
 }
+
