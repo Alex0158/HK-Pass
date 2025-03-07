@@ -1,4 +1,3 @@
-# game/models.py
 from django.db import models
 
 class Team(models.Model):
@@ -33,19 +32,31 @@ class MiniGame(models.Model):
     available_chips = models.IntegerField(default=0)  # 可得籌碼
     is_displayed = models.BooleanField(default=True)  # 是否在遊戲大全中顯示
     is_limited = models.BooleanField(default=False)   # 是否啟用限時功能
-    limited_time = models.IntegerField(default=0)       # 限時秒數
-    play_count = models.IntegerField(default=0)         # 被玩次數
+    limited_time = models.IntegerField(default=0)     # 限時秒數
+    play_count = models.IntegerField(default=0)       # 被玩次數
 
     def __str__(self):
         return self.name
-    
 
 
 class CommonSetting(models.Model):
     attacker_team_bonus = models.IntegerField(default=2, help_text="攻擊者隊伍加分")
     attacker_player_bonus = models.IntegerField(default=1, help_text="攻擊者玩家加分")
-    # 如果需要也可以加入被攻擊次數增加的設定
     attacked_increment = models.IntegerField(default=1, help_text="被攻擊隊伍次數增加")
+
+    hide_team_ranking = models.BooleanField(default=False, help_text="隱藏隊伍排行榜")
+    team_ranking_top_n = models.IntegerField(default=10, help_text="隊伍排行榜顯示前 N 名")
+
+    hide_player_ranking = models.BooleanField(default=False, help_text="隱藏玩家得分排行榜")
+    player_ranking_top_n = models.IntegerField(default=10, help_text="玩家得分排行榜顯示前 N 名")
+
+    hide_attack_count_ranking = models.BooleanField(default=False, help_text="隱藏被攻擊次數排行榜")
+    attack_count_ranking_top_n = models.IntegerField(default=10, help_text="被攻擊次數排行榜顯示前 N 名")
+
+    hide_minigame_ranking = models.BooleanField(default=False, help_text="隱藏小遊戲完成數排行榜")
+    minigame_ranking_top_n = models.IntegerField(default=10, help_text="完成小遊戲數排行榜顯示前 N 名")
+
+    login_password = models.CharField(max_length=128, default="", help_text="登入密碼")
 
     def __str__(self):
         return "全域設定"
