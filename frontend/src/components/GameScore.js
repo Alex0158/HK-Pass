@@ -201,7 +201,7 @@ function GameScore() {
       </Card>
 
       <Card className="mb-4">
-        <Card.Header style={{ fontWeight: "bold" }}>選擇攻擊者 (最多 10 位)</Card.Header>
+        <Card.Header style={{ fontWeight: "bold" }}>選擇攻擊者（勝者Only）</Card.Header>
         <Card.Body>
           {/* 將計分按鈕放在頂部 */}
           <Row className="mb-4">

@@ -16,7 +16,7 @@ const API_BASE_URL = "https://hk-pass-2.onrender.com/api"
 const staticCards = [
   { title: "實時數據", route: "/dashboard" },
   { title: "排行榜", route: "/ranking" },
-  { title: "批量創建", route: "/batch-create" },
+  
   { title: "遊戲大全設定", route: "/game-settings" },
   { title: "遊戲大全", route: "/game-all" },
 ]
@@ -175,7 +175,7 @@ const MainMenu = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1 }}
       >
-        ENTP 統治世界
+        薩里條村
       </motion.h1>
 
       <Row className="w-100 justify-content-center">
