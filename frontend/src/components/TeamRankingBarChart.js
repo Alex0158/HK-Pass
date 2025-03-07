@@ -31,7 +31,7 @@ function TeamRankingBarChart() {
     };
 
     fetchTeams();
-    const interval = setInterval(fetchTeams, 5000);
+    const interval = setInterval(fetchTeams, 1000);
     return () => clearInterval(interval);
   }, []);
 

@@ -1,4 +1,3 @@
-// Updated GameCard.js
 "use client";
 import { Col, Badge } from "react-bootstrap";
 import { motion } from "framer-motion";
@@ -45,9 +44,17 @@ const GameCard = ({ game }) => {
             可得籌碼: {game.available_chips}
           </p>
           {game.is_limited && (
-            <div className="limited-time">
+            <div
+              className="limited-time"
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
               <FaClock className="me-2" />
-              限時: {game.limited_time} 秒
+              限時
             </div>
           )}
         </div>

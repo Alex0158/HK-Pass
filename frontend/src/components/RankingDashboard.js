@@ -31,33 +31,39 @@ const displayValueByField = (value, item, field) => {
 }
 
 function RankingDashboard() {
-  // 一律調用所有 Hooks
+  // 排行榜資料
   const [teams, setTeams] = useState([])
   const [players, setPlayers] = useState([])
+
+  // 從後端抓取 CommonSetting 設定
   const [commonSetting, setCommonSetting] = useState(null)
   const [loadingSettings, setLoadingSettings] = useState(true)
 
-  // 從後端抓取 CommonSetting 設定
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/settings/`)
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`)
-        }
-        const data = await res.json()
-        if (data && data.length > 0) {
-          setCommonSetting(data[0])
-        }
-      } catch (error) {
-        console.error("Error fetching common settings:", error)
-      } finally {
-        setLoadingSettings(false)
+  // 抓取設定的函式，並定時更新（例如每10秒重新抓取一次）
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/settings/`)
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
       }
+      const data = await res.json()
+      if (data && data.length > 0) {
+        setCommonSetting(data[0])
+      }
+    } catch (error) {
+      console.error("Error fetching common settings:", error)
+    } finally {
+      setLoadingSettings(false)
     }
-    fetchSettings()
   }, [])
 
+  useEffect(() => {
+    fetchSettings()
+    const settingsInterval = setInterval(fetchSettings, 10000)
+    return () => clearInterval(settingsInterval)
+  }, [fetchSettings])
+
+  // 儲存上一次資料以供動畫比較
   const prevDataRef = useRef({ teams: [], players: [] })
 
   const fetchData = useCallback(async () => {
@@ -86,11 +92,11 @@ function RankingDashboard() {
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, 1000)
-    return () => clearInterval(interval)
+    const dataInterval = setInterval(fetchData, 1000)
+    return () => clearInterval(dataInterval)
   }, [fetchData])
 
-  // 根據 commonSetting 決定各排行榜顯示的數量與是否隱藏
+  // 依據 commonSetting 設定各排行榜的顯示名次與是否隱藏
   const topCounts = useMemo(() => {
     return {
       teamsScore: commonSetting ? commonSetting.team_ranking_top_n : 6,
@@ -122,9 +128,7 @@ function RankingDashboard() {
   const sortedData = useMemo(
     () => ({
       teamsByScore: teams.slice(0, topCounts.teamsScore),
-      teamsByAttacked: [...teams]
-        .sort((a, b) => b.attacked_count - a.attacked_count)
-        .slice(0, topCounts.teamsAttacked),
+      teamsByAttacked: [...teams].sort((a, b) => b.attacked_count - a.attacked_count).slice(0, topCounts.teamsAttacked),
       playersByScore: players.slice(0, topCounts.playersScore),
       playersByMiniGame: [...players]
         .sort((a, b) => b.completed_minigame_count - a.completed_minigame_count)

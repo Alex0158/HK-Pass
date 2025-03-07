@@ -25,7 +25,7 @@ function GameAll() {
   // 改為每 5 秒刷新一次資料
   useEffect(() => {
     fetchAndSetGames()
-    const interval = setInterval(fetchAndSetGames, 5000)
+    const interval = setInterval(fetchAndSetGames, 3000)
     return () => clearInterval(interval)
   }, [fetchAndSetGames])
 

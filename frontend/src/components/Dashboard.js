@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Container, Card, Table, Form, Button } from 'react-bootstrap';
+import { Container, Card, Table, Form, Button, Spinner } from 'react-bootstrap';
 
 // 設定 Render 上的 API 基底 URL
 const API_BASE_URL = "https://hk-pass-2.onrender.com/api";
@@ -44,7 +44,7 @@ function EditableCell({ value, onSave }) {
   );
 }
 
-// EditableSelectCell component: inline editing dropdown
+// EditableSelectCell component: inline editing dropdown (保留)
 function EditableSelectCell({ value, options, onSave }) {
   const [editing, setEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
@@ -72,7 +72,7 @@ function EditableSelectCell({ value, options, onSave }) {
       </Form.Control>
     );
   } else {
-    const selected = options.find(opt => opt.value === value);
+    const selected = options.find(opt => opt.value === value.toString());
     return (
       <div onClick={() => setEditing(true)} style={{ cursor: 'pointer', padding: '2px 4px', fontSize: '0.9rem' }}>
         {selected ? selected.label : ''}
@@ -102,11 +102,20 @@ function Dashboard() {
     hide_completed_minigame_count: false,
   });
 
-  // Common settings for attack calculations (fetched from backend)
+  // Common settings: 初始值先給預設，但會從後端抓取最新資料
   const [commonSettings, setCommonSettings] = useState({
     attacker_team_bonus: 2,
     attacker_player_bonus: 1,
     attacked_increment: 1,
+    hide_team_ranking: false,
+    team_ranking_top_n: 10,
+    hide_player_ranking: false,
+    player_ranking_top_n: 10,
+    hide_attack_count_ranking: false,
+    attack_count_ranking_top_n: 10,
+    hide_minigame_ranking: false,
+    minigame_ranking_top_n: 10,
+    login_password: "",
     id: null,
   });
 
@@ -122,6 +131,13 @@ function Dashboard() {
       console.error("Error fetching common settings:", error);
     }
   }, []);
+
+  // 定時更新 common settings (每 5 秒)
+  useEffect(() => {
+    fetchCommonSettings();
+    const interval = setInterval(fetchCommonSettings, 1000);
+    return () => clearInterval(interval);
+  }, [fetchCommonSettings]);
 
   // Fetch teams data
   const fetchTeams = useCallback(async () => {
@@ -158,7 +174,7 @@ function Dashboard() {
 
   useEffect(() => {
     refreshAllData();
-    const interval = setInterval(refreshAllData, 5000);
+    const interval = setInterval(refreshAllData, 1000);
     return () => clearInterval(interval);
   }, [refreshAllData]);
 
@@ -232,6 +248,22 @@ function Dashboard() {
         }
       } catch (error) {
         console.error("Error deleting player:", error);
+      }
+    }
+  };
+
+  // Delete team
+  const deleteTeam = async (teamId) => {
+    if (window.confirm("確定要刪除該隊伍嗎？")) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/teams/${teamId}/`, { method: 'DELETE' });
+        if (res.ok) {
+          setTeams(teams.filter(team => team.id !== teamId));
+        } else {
+          alert("刪除隊伍失敗！");
+        }
+      } catch (error) {
+        console.error("Error deleting team:", error);
       }
     }
   };
@@ -335,27 +367,23 @@ function Dashboard() {
     }
   };
 
-  // Inline editing display: if hidden, return '---'
-  const displayValueByFieldFunc = (value, item, field) => {
-    if (field === 'score' || field === 'attacked_count') {
-      return item.hide_ranking ? '---' : value;
-    } else if (field === 'personal_score') {
-      return item.hide_personal_score ? '---' : value;
-    } else if (field === 'completed_minigame_count') {
-      return item.hide_completed_minigame_count ? '---' : value;
-    }
-    return value;
-  };
-
   // Prepare team dropdown options for player editing
   const teamOptions = teams.map(team => ({
     value: team.id.toString(),
     label: team.name,
   }));
 
-  // Update common settings (PATCH) function defined inside the component
+  // Update common settings (PATCH) function
   const updateCommonSetting = async (field, newVal) => {
-    const payload = { [field]: Number(newVal) };
+    let payload;
+    if (typeof commonSettings[field] === 'boolean') {
+      // 對於布林值，直接以 switch 形式更新
+      payload = { [field]: newVal };
+    } else if (typeof commonSettings[field] === 'number') {
+      payload = { [field]: Number(newVal) };
+    } else {
+      payload = { [field]: newVal.toString() };
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/settings/${commonSettings.id}/`, {
         method: 'PATCH',
@@ -377,34 +405,130 @@ function Dashboard() {
     <Container className="my-5">
       <h1 className="text-center mb-4" style={{ fontSize: '1.3rem' }}>實時數據 Dashboard</h1>
       
-      {/* Common Settings Section */}
+      {/* Updated Common Settings Section */}
       <Card className="mb-4">
         <Card.Header as="h5" style={{ fontSize: '1.1rem' }}>通用設定</Card.Header>
         <Card.Body style={{ padding: '5px' }}>
-          <div style={{ marginBottom: '5px', fontSize: '0.9rem' }}>
-            攻擊者隊伍加分量：{" "}
-            <EditableCell
-              value={commonSettings.attacker_team_bonus}
-              onSave={(newVal) => updateCommonSetting('attacker_team_bonus', newVal)}
-            />
+          {/* 第一行：攻擊加分設定 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '5px' }}>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              攻擊者隊伍加分量：
+              <EditableCell
+                value={commonSettings.attacker_team_bonus}
+                onSave={(newVal) => updateCommonSetting('attacker_team_bonus', newVal)}
+              />
+            </div>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              攻擊者玩家加分量：
+              <EditableCell
+                value={commonSettings.attacker_player_bonus}
+                onSave={(newVal) => updateCommonSetting('attacker_player_bonus', newVal)}
+              />
+            </div>
           </div>
+          {/* 第二行：被攻擊次數增加量 */}
           <div style={{ marginBottom: '5px', fontSize: '0.9rem' }}>
-            攻擊者玩家加分量：{" "}
-            <EditableCell
-              value={commonSettings.attacker_player_bonus}
-              onSave={(newVal) => updateCommonSetting('attacker_player_bonus', newVal)}
-            />
-          </div>
-          <div style={{ marginBottom: '5px', fontSize: '0.9rem' }}>
-            被攻擊次數增加量：{" "}
+            被攻擊次數增加量：
             <EditableCell
               value={commonSettings.attacked_increment}
               onSave={(newVal) => updateCommonSetting('attacked_increment', newVal)}
             />
           </div>
+          {/* 第三行：隊伍排行榜設定 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '5px' }}>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              隱藏隊伍排行榜：
+              <Form.Check 
+                type="switch"
+                id="hide-team-ranking"
+                label=""
+                checked={commonSettings.hide_team_ranking}
+                onChange={(e) => updateCommonSetting('hide_team_ranking', e.target.checked)}
+                style={{ marginLeft: '5px' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              隊伍排行榜顯示前幾名：
+              <EditableCell
+                value={commonSettings.team_ranking_top_n}
+                onSave={(newVal) => updateCommonSetting('team_ranking_top_n', newVal)}
+              />
+            </div>
+          </div>
+          {/* 第四行：玩家得分排行榜設定 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '5px' }}>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              隱藏玩家得分排行榜：
+              <Form.Check 
+                type="switch"
+                id="hide-player-ranking"
+                label=""
+                checked={commonSettings.hide_player_ranking}
+                onChange={(e) => updateCommonSetting('hide_player_ranking', e.target.checked)}
+                style={{ marginLeft: '5px' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              玩家得分排行榜顯示前幾名：
+              <EditableCell
+                value={commonSettings.player_ranking_top_n}
+                onSave={(newVal) => updateCommonSetting('player_ranking_top_n', newVal)}
+              />
+            </div>
+          </div>
+          {/* 第五行：被攻擊次數排行榜設定 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '5px' }}>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              隱藏被攻擊次數排行榜：
+              <Form.Check 
+                type="switch"
+                id="hide-attack-count-ranking"
+                label=""
+                checked={commonSettings.hide_attack_count_ranking}
+                onChange={(e) => updateCommonSetting('hide_attack_count_ranking', e.target.checked)}
+                style={{ marginLeft: '5px' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              被攻擊次數排行榜顯示前幾名：
+              <EditableCell
+                value={commonSettings.attack_count_ranking_top_n}
+                onSave={(newVal) => updateCommonSetting('attack_count_ranking_top_n', newVal)}
+              />
+            </div>
+          </div>
+          {/* 第六行：小遊戲排行榜設定 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '5px' }}>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              隱藏小遊戲完成數排行榜：
+              <Form.Check 
+                type="switch"
+                id="hide-minigame-ranking"
+                label=""
+                checked={commonSettings.hide_minigame_ranking}
+                onChange={(e) => updateCommonSetting('hide_minigame_ranking', e.target.checked)}
+                style={{ marginLeft: '5px' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 45%', fontSize: '0.9rem' }}>
+              小遊戲完成數排行榜顯示前幾名：
+              <EditableCell
+                value={commonSettings.minigame_ranking_top_n}
+                onSave={(newVal) => updateCommonSetting('minigame_ranking_top_n', newVal)}
+              />
+            </div>
+          </div>
+          {/* 第七行：登入密碼 */}
+          <div style={{ marginBottom: '5px', fontSize: '0.9rem' }}>
+            登入密碼：
+            <EditableCell
+              value={commonSettings.login_password}
+              onSave={(newVal) => updateCommonSetting('login_password', newVal)}
+            />
+          </div>
         </Card.Body>
       </Card>
-
+      
       {/* Teams Data Section */}
       <Card className="mb-4">
         <Card.Header as="h5" style={{ fontSize: '1.1rem' }}>隊伍數據</Card.Header>
@@ -412,15 +536,23 @@ function Dashboard() {
           <Table striped bordered hover responsive style={{ fontSize: '0.8rem' }}>
             <thead>
               <tr>
-                <th style={{ width: '30%' }}>隊伍名稱</th>
-                <th style={{ width: '20%' }}>分數</th>
-                <th style={{ width: '20%' }}>被攻擊次數</th>
-                <th style={{ width: '30%' }}>操作</th>
+                <th style={{ width: '8%' }}>刪除</th>
+                <th style={{ width: '25%' }}>隊伍名稱</th>
+                <th style={{ width: '15%' }}>分數</th>
+                <th style={{ width: '15%' }}>被攻擊次數</th>
+                <th style={{ width: '15%' }}>隱藏排行榜</th>
+                <th style={{ width: '15%' }}>隱藏隊伍名稱</th>
+                <th style={{ width: '17%' }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {teams.map(team => (
                 <tr key={team.id}>
+                  <td style={{ textAlign: 'center' }}>
+                    <Button variant="danger" size="sm" onClick={() => deleteTeam(team.id)} style={{ fontSize: '0.9rem', padding: '3px 6px' }}>
+                      刪除
+                    </Button>
+                  </td>
                   <td>
                     <EditableCell 
                       value={team.name} 
@@ -439,6 +571,22 @@ function Dashboard() {
                       onSave={(newVal) => updateTeam(team.id, 'attacked_count', newVal)} 
                     />
                   </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <Form.Check
+                      type="switch"
+                      id={`hide-ranking-${team.id}`}
+                      checked={team.hide_ranking}
+                      onChange={(e) => updateTeam(team.id, 'hide_ranking', e.target.checked)}
+                    />
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <Form.Check
+                      type="switch"
+                      id={`hide-team-name-${team.id}`}
+                      checked={team.hide_team_name}
+                      onChange={(e) => updateTeam(team.id, 'hide_team_name', e.target.checked)}
+                    />
+                  </td>
                   <td>
                     <Button variant="warning" size="sm" className="me-1" onClick={() => clearTeamScore(team.id)} style={{ fontSize: '0.9rem', padding: '3px 6px' }}>
                       清零
@@ -451,6 +599,7 @@ function Dashboard() {
               ))}
               {/* New team row */}
               <tr>
+                <td></td>
                 <td>
                   <Form.Control 
                     type="text" 
@@ -461,27 +610,25 @@ function Dashboard() {
                     style={{ fontSize: '0.9rem', padding: '3px' }}
                   />
                 </td>
-                <td style={{ textAlign: 'center', fontSize: '0.9rem' }}>0</td>
-                <td style={{ textAlign: 'center', fontSize: '0.9rem' }}>0</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>0</td>
+                <td style={{ textAlign: 'center' }}>0</td>
+                <td style={{ textAlign: 'center' }}>
                   <Form.Check
-                    type="checkbox"
-                    label="隱藏排行榜數值"
+                    type="switch"
+                    id="new-hide-ranking"
                     checked={newTeam.hide_ranking}
                     onChange={(e) => setNewTeam({ ...newTeam, hide_ranking: e.target.checked })}
-                    className="mb-1"
-                    size="sm"
-                    style={{ fontSize: '0.9rem' }}
                   />
+                </td>
+                <td style={{ textAlign: 'center' }}>
                   <Form.Check
-                    type="checkbox"
-                    label="隱藏隊伍名稱"
+                    type="switch"
+                    id="new-hide-team-name"
                     checked={newTeam.hide_team_name}
                     onChange={(e) => setNewTeam({ ...newTeam, hide_team_name: e.target.checked })}
-                    className="mb-1"
-                    size="sm"
-                    style={{ fontSize: '0.9rem' }}
                   />
+                </td>
+                <td>
                   <Button variant="success" size="sm" onClick={addTeam} style={{ fontSize: '0.9rem', padding: '3px 6px' }}>
                     新增
                   </Button>
@@ -491,7 +638,7 @@ function Dashboard() {
           </Table>
         </Card.Body>
       </Card>
-
+      
       {/* Players Data Section */}
       <Card className="mb-4">
         <Card.Header as="h5" style={{ fontSize: '1.1rem' }}>玩家數據</Card.Header>
@@ -506,6 +653,7 @@ function Dashboard() {
                 <th style={{ width: '10%' }}>個人得分</th>
                 <th style={{ width: '12%' }}>籌碼</th>
                 <th style={{ width: '15%' }}>完成遊戲數量</th>
+                <th style={{ width: '20%' }}>隱藏設定</th>
                 <th style={{ width: '13%' }}>得分/籌碼清零</th>
               </tr>
             </thead>
@@ -553,6 +701,38 @@ function Dashboard() {
                       value={player.completed_minigame_count} 
                       onSave={(newVal) => updatePlayer(player.id, 'completed_minigame_count', newVal)} 
                     />
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <Form.Check
+                        type="switch"
+                        id={`hide-team-${player.id}`}
+                        label="隱藏隊伍"
+                        checked={player.hide_team}
+                        onChange={(e) => updatePlayer(player.id, 'hide_team', e.target.checked)}
+                      />
+                      <Form.Check
+                        type="switch"
+                        id={`hide-name-${player.id}`}
+                        label="隱藏姓名"
+                        checked={player.hide_name}
+                        onChange={(e) => updatePlayer(player.id, 'hide_name', e.target.checked)}
+                      />
+                      <Form.Check
+                        type="switch"
+                        id={`hide-score-${player.id}`}
+                        label="隱藏得分"
+                        checked={player.hide_personal_score}
+                        onChange={(e) => updatePlayer(player.id, 'hide_personal_score', e.target.checked)}
+                      />
+                      <Form.Check
+                        type="switch"
+                        id={`hide-completed-${player.id}`}
+                        label="隱藏完成數"
+                        checked={player.hide_completed_minigame_count}
+                        onChange={(e) => updatePlayer(player.id, 'hide_completed_minigame_count', e.target.checked)}
+                      />
+                    </div>
                   </td>
                   <td>
                     <Button variant="warning" size="sm" className="me-1" onClick={() => clearPlayerScore(player.id)} style={{ fontSize: '0.9rem', padding: '3px 6px' }}>
@@ -603,9 +783,9 @@ function Dashboard() {
                     style={{ fontSize: '0.9rem', padding: '3px' }}
                   />
                 </td>
-                <td style={{ textAlign: 'center', fontSize: '0.9rem' }}>0</td>
-                <td style={{ textAlign: 'center', fontSize: '0.9rem' }}>0</td>
-                <td style={{ textAlign: 'center', fontSize: '0.9rem' }}>0</td>
+                <td style={{ textAlign: 'center' }}>0</td>
+                <td style={{ textAlign: 'center' }}>0</td>
+                <td style={{ textAlign: 'center' }}>0</td>
                 <td>
                   <Form.Check
                     type="checkbox"

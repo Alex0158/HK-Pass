@@ -5,15 +5,14 @@ import { Form, Row, Col, Button } from "react-bootstrap"
 // 從 apiService 引入更新玩家與隊伍的方法
 import { updateTeam, updatePlayer } from "../api/apiService"
 
-// 更新後的 AttackForm，統一使用 apiService 的 API_BASE_URL 進行請求
 export default function AttackForm({ team, allTeams, allPlayers, commonSettings, refreshData }) {
   const [attackerTeam, setAttackerTeam] = useState("")
-  const [attackerNumber, setAttackerNumber] = useState("")
+  const [attackerName, setAttackerName] = useState("")
   const [attackCount, setAttackCount] = useState(1)
   const [attackerPlayers, setAttackerPlayers] = useState([])
 
-  // 使用 useRef 保持 attackerNumber 值不被 useEffect 清空
-  const attackerNumberRef = useRef(attackerNumber)
+  // 使用 useRef 保持 attackerName 值不被 useEffect 清空
+  const attackerNameRef = useRef(attackerName)
 
   // 當攻擊者隊伍變動時，從 allPlayers 中過濾出該隊伍的玩家
   useEffect(() => {
@@ -23,22 +22,22 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
         return playerTeam && playerTeam.name.trim().toLowerCase() === attackerTeam.trim().toLowerCase()
       })
       setAttackerPlayers(filtered)
-      // 只有當目前選定的攻擊者號碼不在新的列表時，才重置
-      if (!filtered.some(player => player.number === attackerNumberRef.current)) {
-        setAttackerNumber("")
+      // 當目前選定的攻擊者姓名不在新的列表中時，重置 attackerName
+      if (!filtered.some(player => player.name === attackerNameRef.current)) {
+        setAttackerName("")
       }
     } else {
       setAttackerPlayers([])
     }
   }, [attackerTeam, allPlayers, allTeams])
 
-  // 讓 attackerNumberRef 保持最新
+  // 讓 attackerNameRef 保持最新
   useEffect(() => {
-    attackerNumberRef.current = attackerNumber
-  }, [attackerNumber])
+    attackerNameRef.current = attackerName
+  }, [attackerName])
 
   const handleAttack = async () => {
-    if (!attackerTeam || !attackerNumber || !attackCount || !commonSettings) {
+    if (!attackerTeam || !attackerName || !attackCount || !commonSettings) {
       alert("請填寫所有欄位並確保通用設定已載入")
       return
     }
@@ -57,8 +56,8 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
       const newAttackedCount = team.attacked_count + count * commonSettings.attacked_increment
       await updateTeam(team.id, { attacked_count: newAttackedCount })
 
-      // 從攻擊者隊伍中找出對應的玩家
-      const attackerPlayer = attackerPlayers.find((p) => p.number.trim() === attackerNumber.trim())
+      // 從攻擊者隊伍中找出對應的玩家，根據姓名
+      const attackerPlayer = attackerPlayers.find((p) => p.name.trim() === attackerName.trim())
       if (attackerPlayer) {
         // 更新攻擊者玩家的分數
         const newPlayerScore = attackerPlayer.personal_score + count * commonSettings.attacker_player_bonus
@@ -76,7 +75,7 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
 
       alert(`攻擊記錄已提交：
 攻擊者隊伍: ${attackerTeam}，
-攻擊者號碼: ${attackerNumber}，
+攻擊者姓名: ${attackerName}，
 攻擊次數: ${count}，
 被攻擊次數增加: ${count * commonSettings.attacked_increment}，
 攻擊者玩家加分: ${count * commonSettings.attacker_player_bonus}，
@@ -86,7 +85,7 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
       await refreshData()
       // 清空輸入欄位
       setAttackerTeam("")
-      setAttackerNumber("")
+      setAttackerName("")
       setAttackCount(1)
     } catch (error) {
       console.error("Error updating data:", error)
@@ -119,20 +118,20 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
           </Form.Group>
         </Col>
         <Col md={3}>
-          <Form.Group controlId="formAttackerNumber">
-            <Form.Label style={{ fontSize: "0.7rem" }}>攻擊者號碼</Form.Label>
+          <Form.Group controlId="formAttackerName">
+            <Form.Label style={{ fontSize: "0.7rem" }}>攻擊者姓名</Form.Label>
             <Form.Control
               as="select"
-              value={attackerNumber}
-              onChange={(e) => setAttackerNumber(e.target.value)}
+              value={attackerName}
+              onChange={(e) => setAttackerName(e.target.value)}
               size="sm"
               style={{ fontSize: "0.7rem" }}
               disabled={!attackerTeam || attackerPlayers.length === 0}
             >
-              <option value="">請選擇攻擊者號碼</option>
+              <option value="">請選擇攻擊者姓名</option>
               {attackerPlayers.map((player) => (
-                <option key={player.id} value={player.number}>
-                  {player.number}
+                <option key={player.id} value={player.name}>
+                  {player.name}
                 </option>
               ))}
             </Form.Control>
@@ -173,4 +172,3 @@ export default function AttackForm({ team, allTeams, allPlayers, commonSettings,
     </Form>
   )
 }
-
