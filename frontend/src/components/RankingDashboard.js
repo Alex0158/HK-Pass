@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import { Container, Row, Col, Card, Form } from "react-bootstrap"
+import { Container, Row, Col, Card, Spinner } from "react-bootstrap"
 import { motion, AnimatePresence } from "framer-motion"
 import styles from "./RankingDashboard.module.css"
 
@@ -31,20 +31,32 @@ const displayValueByField = (value, item, field) => {
 }
 
 function RankingDashboard() {
+  // 一律調用所有 Hooks
   const [teams, setTeams] = useState([])
   const [players, setPlayers] = useState([])
-  const [topCounts, setTopCounts] = useState({
-    teamsScore: 6,
-    teamsAttacked: 6,
-    playersScore: 6,
-    playersMiniGame: 6,
-  })
-  const [hideRankings, setHideRankings] = useState({
-    teamsScore: false,
-    teamsAttacked: false,
-    playersScore: false,
-    playersMiniGame: false,
-  })
+  const [commonSetting, setCommonSetting] = useState(null)
+  const [loadingSettings, setLoadingSettings] = useState(true)
+
+  // 從後端抓取 CommonSetting 設定
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/settings/`)
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+        const data = await res.json()
+        if (data && data.length > 0) {
+          setCommonSetting(data[0])
+        }
+      } catch (error) {
+        console.error("Error fetching common settings:", error)
+      } finally {
+        setLoadingSettings(false)
+      }
+    }
+    fetchSettings()
+  }, [])
 
   const prevDataRef = useRef({ teams: [], players: [] })
 
@@ -78,6 +90,25 @@ function RankingDashboard() {
     return () => clearInterval(interval)
   }, [fetchData])
 
+  // 根據 commonSetting 決定各排行榜顯示的數量與是否隱藏
+  const topCounts = useMemo(() => {
+    return {
+      teamsScore: commonSetting ? commonSetting.team_ranking_top_n : 6,
+      teamsAttacked: commonSetting ? commonSetting.attack_count_ranking_top_n : 6,
+      playersScore: commonSetting ? commonSetting.player_ranking_top_n : 6,
+      playersMiniGame: commonSetting ? commonSetting.minigame_ranking_top_n : 6,
+    }
+  }, [commonSetting])
+
+  const hideRankings = useMemo(() => {
+    return {
+      teamsScore: commonSetting ? commonSetting.hide_team_ranking : false,
+      teamsAttacked: commonSetting ? commonSetting.hide_attack_count_ranking : false,
+      playersScore: commonSetting ? commonSetting.hide_player_ranking : false,
+      playersMiniGame: commonSetting ? commonSetting.hide_minigame_ranking : false,
+    }
+  }, [commonSetting])
+
   const maxValues = useMemo(
     () => ({
       teamScore: Math.max(...teams.map((team) => team.score), 1),
@@ -91,7 +122,9 @@ function RankingDashboard() {
   const sortedData = useMemo(
     () => ({
       teamsByScore: teams.slice(0, topCounts.teamsScore),
-      teamsByAttacked: [...teams].sort((a, b) => b.attacked_count - a.attacked_count).slice(0, topCounts.teamsAttacked),
+      teamsByAttacked: [...teams]
+        .sort((a, b) => b.attacked_count - a.attacked_count)
+        .slice(0, topCounts.teamsAttacked),
       playersByScore: players.slice(0, topCounts.playersScore),
       playersByMiniGame: [...players]
         .sort((a, b) => b.completed_minigame_count - a.completed_minigame_count)
@@ -190,99 +223,65 @@ function RankingDashboard() {
 
   return (
     <Container fluid className={styles.container}>
-      <h1 className={styles.title}>排行榜</h1>
-      <Row>
-        <Col lg={6}>
-          <RankingCard
-            title="隊伍總分排名"
-            items={sortedData.teamsByScore}
-            maxValue={maxValues.teamScore}
-            valueKey="score"
-            labelType="team"
-            cardGradient={gradients.teamScore}
-            isHidden={hideRankings.teamsScore}
-          />
-        </Col>
-        <Col lg={6}>
-          <RankingCard
-            title="隊伍被攻擊次數排名"
-            items={sortedData.teamsByAttacked}
-            maxValue={maxValues.teamAttacked}
-            valueKey="attacked_count"
-            labelType="team"
-            cardGradient={gradients.teamAttacked}
-            isHidden={hideRankings.teamsAttacked}
-          />
-        </Col>
-      </Row>
-      <Row>
-        <Col lg={6}>
-          <RankingCard
-            title="玩家得分排名"
-            items={sortedData.playersByScore}
-            maxValue={maxValues.playerScore}
-            valueKey="personal_score"
-            labelType="player"
-            cardGradient={gradients.playerScore}
-            isHidden={hideRankings.playersScore}
-          />
-        </Col>
-        <Col lg={6}>
-          <RankingCard
-            title="玩家小遊戲完成數排名"
-            items={sortedData.playersByMiniGame}
-            maxValue={maxValues.playerMiniGame}
-            valueKey="completed_minigame_count"
-            labelType="player"
-            cardGradient={gradients.playerMiniGame}
-            isHidden={hideRankings.playersMiniGame}
-          />
-        </Col>
-      </Row>
-
-      <Card className={styles.settingsCard}>
-        <Card.Header as="h5" className={styles.settingsHeader}>
-          排行榜設定
-        </Card.Header>
-        <Card.Body className={styles.settingsBody}>
+      {loadingSettings ? (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Spinner animation="border" variant="light" />
+        </div>
+      ) : (
+        <>
+          <h1 className={styles.title}>排行榜</h1>
           <Row>
-            {Object.entries(topCounts).map(([key, value]) => (
-              <Col md={6} lg={3} key={key}>
-                <Form.Group controlId={`${key}Count`} className="mb-3">
-                  <Form.Label className={styles.formLabel}>
-                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())} 顯示前幾名
-                  </Form.Label>
-                  <Form.Control
-                    type="number"
-                    value={value}
-                    onChange={(e) => setTopCounts((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
-                    min={1}
-                    className={styles.formControl}
-                  />
-                </Form.Group>
-              </Col>
-            ))}
+            <Col lg={6}>
+              <RankingCard
+                title="隊伍總分排名"
+                items={sortedData.teamsByScore}
+                maxValue={maxValues.teamScore}
+                valueKey="score"
+                labelType="team"
+                cardGradient={gradients.teamScore}
+                isHidden={hideRankings.teamsScore}
+              />
+            </Col>
+            <Col lg={6}>
+              <RankingCard
+                title="隊伍被攻擊次數排名"
+                items={sortedData.teamsByAttacked}
+                maxValue={maxValues.teamAttacked}
+                valueKey="attacked_count"
+                labelType="team"
+                cardGradient={gradients.teamAttacked}
+                isHidden={hideRankings.teamsAttacked}
+              />
+            </Col>
           </Row>
           <Row>
-            {Object.entries(hideRankings).map(([key, value]) => (
-              <Col md={6} lg={3} key={key}>
-                <Form.Group controlId={`hide${key.charAt(0).toUpperCase() + key.slice(1)}`} className="mb-3">
-                  <Form.Check
-                    type="switch"
-                    label={`隱藏${key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}排行榜`}
-                    checked={value}
-                    onChange={(e) => setHideRankings((prev) => ({ ...prev, [key]: e.target.checked }))}
-                    className={styles.formCheck}
-                  />
-                </Form.Group>
-              </Col>
-            ))}
+            <Col lg={6}>
+              <RankingCard
+                title="玩家得分排名"
+                items={sortedData.playersByScore}
+                maxValue={maxValues.playerScore}
+                valueKey="personal_score"
+                labelType="player"
+                cardGradient={gradients.playerScore}
+                isHidden={hideRankings.playersScore}
+              />
+            </Col>
+            <Col lg={6}>
+              <RankingCard
+                title="玩家小遊戲完成數排名"
+                items={sortedData.playersByMiniGame}
+                maxValue={maxValues.playerMiniGame}
+                valueKey="completed_minigame_count"
+                labelType="player"
+                cardGradient={gradients.playerMiniGame}
+                isHidden={hideRankings.playersMiniGame}
+              />
+            </Col>
           </Row>
-        </Card.Body>
-      </Card>
+        </>
+      )}
     </Container>
   )
 }
 
 export default RankingDashboard
-
